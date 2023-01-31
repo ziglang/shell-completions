@@ -1,13 +1,17 @@
 #!/bin/bash
 
-# Make the .config/ziggy directory
-mkdir -p ~/.config/ziggy
+# Remove the existing .config/ziggy directory if it exists
+rm -rf ~/.config/ziggy
+
+# Make the .config/ziggy directory and navigate to
+mkdir ~/.config/ziggy && cd ~/.config/ziggy
 
 # Download the _zig file to the .config/ziggy directory
-curl https://raw.githubusercontent.com/ziglang/shell-completions/master/_zig -o ~/.config/ziggy/_zig
+wget https://raw.githubusercontent.com/Byte-Cats/shell-completions/master/_zig
 
-# Add the .config/ziggy directory to the $fpath
-echo "source \"~/.config/ziggy/_zig\"" >> /.bashrc
+# Add the .config/ziggy directory to the $fpath, remove duplicates
+echo "fpath=(~/.config/ziggy \$fpath)" >> ~/.bashrc
+sed -i '$!N; /^\(.*\)\n\1$/!P; D' ~/.bashrc
 
 # Source the ~/.bashrc file to update the current terminal
 source ~/.bashrc
