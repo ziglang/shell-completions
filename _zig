@@ -271,21 +271,21 @@ __zig_build() {
         continue
       fi
       #  step (default)     description  -> step:(default) description
-      steps+=("$(echo "$line" | sed -r 's/\s*(\S+)\s+(\(default\) )?\s+([^\s].*)/\1:\2\3/')")
+      steps+=("$(sed -r 's/\s*(\S+)\s+(\(default\) )?\s+([^\s].*)/\1:\2\3/' <<<"$line")")
     elif [ "$in_project_options" = "false" ]; then
       if [ "$line" = "Project-Specific Options:" ]; then
         in_project_options=true
         continue
       fi
     else
-      if [ -n "$(echo "$line" | grep '  -')" ]; then
+      if [ -n "$(grep '  -' <<<"$line")" ]; then
         #  -Dflag=[arg]       description -> -Dflag=[description]:arg
-        args+=("$(echo "$line" | sed -r "s/  ([^\[ ]+) ?(\[([^]]*)\])?\s*(.+)/\1[\4]:\3/")")
+        args+=("$(sed -r "s/  ([^\[ ]+) ?(\[([^]]*)\])?\s*(.+)/\1[\4]:\3/" <<<"$line")")
       fi
     fi
   done <<< $help
 
-  if [ -z "$(/usr/bin/echo $words[$CURRENT] | grep "^-")" ]; then
+  if [ -z "$(grep "^-" <<<$words[$CURRENT])" ]; then
     _describe 'step' steps
   else
     _arguments ${args[@]}
