@@ -271,7 +271,7 @@ __zig_build() {
         continue
       fi
       #  step (default)     description  -> step:(default) description
-      steps+=("$(sed -r 's/\s*(\S+)\s+(\(default\) )?\s+([^\s].*)/\1:\2\3/' <<<"$line")")
+      steps+=("$(sed -r 's/^ *([^ ]+)( \(default\))? +(.*) *$/\1:\3\2/' <<<"$line")")
     elif [ "$in_project_options" = "false" ]; then
       if [ "$line" = "Project-Specific Options:" ]; then
         in_project_options=true
@@ -280,7 +280,7 @@ __zig_build() {
     else
       if [ -n "$(grep '  -' <<<"$line")" ]; then
         #  -Dflag=[arg]       description -> -Dflag=[description]:arg
-        args+=("$(sed -r "s/  ([^\[ ]+) ?(\[([^]]*)\])?\s*(.+)/\1[\4]:\3/" <<<"$line")")
+        args+=("$(sed -r 's/^ *([^\[ ]+) ?(\[([^]]*)\])? *(.+) *$/\1[\4]:\3/' <<<"$line")")
       fi
     fi
   done <<< $help
