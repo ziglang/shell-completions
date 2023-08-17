@@ -14,5 +14,5 @@ Once the `$fpath` variable is updated, run `compinit` to rebuild `~/.zcompdump`.
 
 ```sh
 curl -LO "https://raw.githubusercontent.com/ziglang/shell-completions/master/_zig.bash"
-echo ". $PWD/_zig.bash" >> ~.bashrc
+echo ". $PWD/_zig.bash" >> ~/.bashrc
 ```
