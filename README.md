@@ -10,6 +10,20 @@ The `_zig` file needs to be included in your `$fpath`. This can be achieved in t
 
 Once the `$fpath` variable is updated, run `compinit` to rebuild `~/.zcompdump`.
 
+### Installation for Oh My Zsh
+
+1. Clone the plugin as `zig-shell-completions`
+
+```sh
+git clone https://github.com/ziglang/shell-completions $ZSH/custom/plugins/zig-shell-completions
+```
+
+2. Add the plugin `zig-shell-completions` to `$plugin`
+
+```sh
+plugins+=(zig-shell-completions)
+```
+
 ## Installation for bash
 
 ```sh
