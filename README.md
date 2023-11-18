@@ -15,7 +15,7 @@ Once the `$fpath` variable is updated, run `compinit` to rebuild `~/.zcompdump`.
 1. Clone the plugin as `zig-shell-completions`
 
 ```sh
-git clone https://github.com/ziglang/shell-completions $ZSH/custom/zig-shell-completions
+git clone https://github.com/ziglang/shell-completions $ZSH/custom/plugins/zig-shell-completions
 ```
 
 2. Add the plugin `zig-shell-completions` to `$plugin`
