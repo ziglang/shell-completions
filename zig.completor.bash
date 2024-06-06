@@ -8,8 +8,11 @@ cmd=zig
 cmd_opts=(-h --help)
 
 subcmds=(
-  build init-exe init-lib ast-check build-exe build-lib build-obj fmt run test
-  translate-c ar cc c++ dlltool lib ranlib env help libc targets version zen
+  build fetch init
+  build-exe build-lib build-obj test run
+  ast-check fmt reduce translate-c
+  ar cc c++ dlltool lib ranlib rc
+  env help std libc targets version zen
 )
 
 word_to_varname=(
@@ -17,7 +20,8 @@ word_to_varname=(
 )
 
 reply_zig_file=(
-  'reply_files_in_pattern' '\.(zig|zir|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
+  'reply_files_in_pattern'
+  '\.(zig|zir|zon|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
 )
 
 subcmd_opts__fallback='--help'
@@ -25,43 +29,57 @@ subcmd_opts__fallback='--help'
 subcmd_opts_build=(
   -p:@dirs
   --prefix:@dirs
+  --prefix-lib-dir:@dirs
   --prefix-exe-dir:@dirs
   --prefix-include-dir:@dirs
-  --prefix-lib-dir:@dirs
 
-  --sysroot:@dirs
-  --search-prefix:@dirs
-  --libc:@files
-  --glibc-runtimes:@files
+  --release=:'fast,safe,small'
 
-  -h --help
-  --color:'auto,off,on'
-  --verbose
-  --prominent-compile-errors
-
-  -fstage1 -fno-stage1
   -fdarling -fno-darling
   -fqemu -fno-qemu
-  -fwine -fno-wine
+  --glibc-runtimes:@files
   -frosetta -fno-rosetta
   -fwasmtime -fno-wasmtime
+  -fwine -fno-wine
+
+  -h --help
+  -l, --list-steps
+  --verbose
+  --color:'auto,off,on'
+  --prominent-compile-errors
+  --summary:'all,new,failures,none'
+  --j
+  --maxrss:@hold
+  --fetch
+
+  -Dtarget=
+  -Dcpu=
+  -Ddynamic-linker=
+  -Doptimize=:'Debug,ReleaseSafe,ReleaseFast,ReleaseSmall'
+
+  --search-prefix:@dirs
+  --sysroot:@dirs
+  --libc:@files
+
+  --system:@dirs
+  -fsys= -fno-sys=
+
   -freference-trace:@hold
   -fno-reference-trace
-
-  -Dcpu=
-  -Drelease-fast=
-  -Drelease-safe=
-  -Drelease-small=
-  -Dtarget=
 
   --build-file:@files
   --cache-dir:@dirs
   --global-cache-dir:@dirs
   --zig-lib-dir:@dirs
+  --build-runner:@files
+  --seed:@hold
+
   --debug-log:@hold
+  --debug-pkg-config
   --verbose-link
   --verbose-air
   --verbose-llvm-ir
+  --verbose-llvm-bc=
   --verbose-cimport
   --verbose-cc
   --verbose-llvm-cpu-features
@@ -83,6 +101,7 @@ subcmd_args_fmt=@zig_file
 subcmd_opts_libc=(
   -h --help
   -target:@hold
+  -includes
 )
 subcmd_args_libc=@zig_file
 

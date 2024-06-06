@@ -27,7 +27,7 @@ _zig_comp_subcmd_opts_ar=( --format --plugin= -h --help --output --rsp-quoting -
 
 _zig_comp_subcmd_opts_ast_check=( -h --help --color -t )
 
-_zig_comp_subcmd_opts_build=( -p --prefix --prefix-exe-dir --prefix-include-dir --prefix-lib-dir --sysroot --search-prefix --libc --glibc-runtimes -h --help --color --verbose --prominent-compile-errors -fstage1 -fno-stage1 -fdarling -fno-darling -fqemu -fno-qemu -fwine -fno-wine -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -freference-trace -fno-reference-trace -Dcpu= -Drelease-fast= -Drelease-safe= -Drelease-small= -Dtarget= --build-file --cache-dir --global-cache-dir --zig-lib-dir --debug-log --verbose-link --verbose-air --verbose-llvm-ir --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
+_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l, --list-steps --verbose --color --prominent-compile-errors --summary --j --maxrss --fetch -Dtarget= -Dcpu= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
 
 _zig_comp_subcmd_opts_build_fallback=( @files )
 
@@ -35,7 +35,7 @@ _zig_comp_subcmd_opts_dlltool=( -D -d -f -k -l -m -S )
 
 _zig_comp_subcmd_opts_fmt=( -h --help --color --stdin --check --ast-check --exclude )
 
-_zig_comp_subcmd_opts_libc=( -h --help -target )
+_zig_comp_subcmd_opts_libc=( -h --help -target -includes )
 
 _zig_comp_subcmd_opts_ranlib=( -h --help -v --version -D -U )
 
@@ -112,18 +112,21 @@ _zig_comp_reply_set() {
 }
 
 _zig_comp_reply_zig_file() {
-  _zig_comp_reply_files_in_pattern '\.(zig|zir|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
+  _zig_comp_reply_files_in_pattern '\.(zig|zir|zon|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
 }
 
-_zig_comp_subcmds=( build init-exe init-lib ast-check build-exe build-lib build-obj fmt run test translate-c ar cc c++ dlltool lib ranlib env help libc targets version zen )
+_zig_comp_subcmds=( build fetch init build-exe build-lib build-obj test run ast-check fmt reduce translate-c ar cc c++ dlltool lib ranlib rc env help std libc targets version zen )
 
 _zig_comp_equal_sign_subcmd_opts_build() {
   case "${1}=" in
-    -Dcpu=)  ;;
-    -Drelease-fast=)  ;;
-    -Drelease-safe=)  ;;
-    -Drelease-small=)  ;;
+    --release=) _zig_comp_reply_words 'fast,safe,small' ;;
     -Dtarget=)  ;;
+    -Dcpu=)  ;;
+    -Ddynamic-linker=)  ;;
+    -Doptimize=) _zig_comp_reply_words 'Debug,ReleaseSafe,ReleaseFast,ReleaseSmall' ;;
+    -fsys=)  ;;
+    -fno-sys=)  ;;
+    --verbose-llvm-bc=)  ;;
   esac
 }
 
@@ -139,16 +142,20 @@ _zig_completions_build() {
       # rely the value of command option
       -p) _zig_comp_reply_dirs ;;
       --prefix) _zig_comp_reply_dirs ;;
+      --prefix-lib-dir) _zig_comp_reply_dirs ;;
       --prefix-exe-dir) _zig_comp_reply_dirs ;;
       --prefix-include-dir) _zig_comp_reply_dirs ;;
-      --prefix-lib-dir) _zig_comp_reply_dirs ;;
-      --sysroot) _zig_comp_reply_dirs ;;
-      --search-prefix) _zig_comp_reply_dirs ;;
       --color) _zig_comp_reply_words 'auto,off,on' ;;
+      --summary) _zig_comp_reply_words 'all,new,failures,none' ;;
+      --maxrss)  ;;
+      --search-prefix) _zig_comp_reply_dirs ;;
+      --sysroot) _zig_comp_reply_dirs ;;
+      --system) _zig_comp_reply_dirs ;;
       -freference-trace)  ;;
       --cache-dir) _zig_comp_reply_dirs ;;
       --global-cache-dir) _zig_comp_reply_dirs ;;
       --zig-lib-dir) _zig_comp_reply_dirs ;;
+      --seed)  ;;
       --debug-log)  ;;
       *) _zig_comp_reply_files ;;
     esac
@@ -160,32 +167,90 @@ _zig_completions_build() {
   fi
 }
 
-_zig_completions_ast_check() {
-  if [[ ${cur:0:1} == [-+] ]]; then
-    # rely options of command
-    _zig_comp_reply_list _zig_comp_subcmd_opts_ast_check
-  elif [[ ${prev:0:1} == [-+] ]]; then
-    case "${prev}" in
-      # rely the value of command option
-      --color) _zig_comp_reply_words 'auto,off,on' ;;
-      *) _zig_comp_reply_zig_file ;;
-    esac
-  else
-    # rely the argument of command
-    _zig_comp_reply_zig_file
-  fi
+_zig_comp_equal_sign_subcmd_opts_test() {
+  case "${1}=" in
+    -mcmodel=) _zig_comp_reply_words 'default,tiny,small,kernel,medium,large' ;;
+    -mexec-model=)  ;;
+    -ofmt=) _zig_comp_reply_words 'elf,c,wasm,coff,macho,spirv,plan9,hex,raw' ;;
+    --compress-debug-sections=) _zig_comp_reply_words 'none,zlib' ;;
+    -install_name=)  ;;
+    --initial-memory=)  ;;
+    --max-memory=)  ;;
+    --global-base=)  ;;
+    --export=)  ;;
+  esac
 }
 
-_zig_completions_fmt() {
+_zig_completions_test() {
   if [[ ${cur:0:1} == [-+] ]]; then
     # rely options of command
-    _zig_comp_reply_list _zig_comp_subcmd_opts_fmt
+    _zig_comp_reply_list _zig_comp_subcmd_opts_test
+    if [[ ${COMPREPLY[*]} =~ =$ ]]; then compopt -o nospace; fi
+  elif [[ ${cur} == = ]]; then
+    _zig_comp_equal_sign_subcmd_opts_test "$prev"
   elif [[ ${prev:0:1} == [-+] ]]; then
     case "${prev}" in
       # rely the value of command option
+      --test-filter)  ;;
+      --test-name-prefix)  ;;
+      --test-cmd)  ;;
       --color) _zig_comp_reply_words 'auto,off,on' ;;
+      -femit-bin) _zig_comp_reply_files ;;
+      -femit-asm) _zig_comp_reply_files ;;
+      -femit-llvm-ir) _zig_comp_reply_files ;;
+      -femit-llvm-bc) _zig_comp_reply_files ;;
+      -femit-h) _zig_comp_reply_files ;;
+      -femit-docs) _zig_comp_reply_dirs ;;
+      -femit-analysis) _zig_comp_reply_files ;;
+      -femit-implib) _zig_comp_reply_files ;;
+      --cache-dir) _zig_comp_reply_dirs ;;
+      --global-cache-dir) _zig_comp_reply_dirs ;;
+      --zig-lib-dir) _zig_comp_reply_dirs ;;
+      -target)  ;;
+      -mcpu)  ;;
+      -fomit-frame-pointer)  ;;
+      --name)  ;;
+      -O) _zig_comp_reply_words 'Debug,ReleaseFast,ReleaseSafe,ReleaseSmall' ;;
+      --pkg-begin)  ;;
+      --main-pkg-path) _zig_comp_reply_dirs ;;
+      -idirafter) _zig_comp_reply_dirs ;;
+      -isystem) _zig_comp_reply_dirs ;;
+      -I) _zig_comp_reply_dirs ;;
+      -cflags)  ;;
+      -l) _zig_comp_reply_files ;;
+      --library) _zig_comp_reply_files ;;
+      -needed-l) _zig_comp_reply_files ;;
+      --needed-library) _zig_comp_reply_files ;;
+      -L) _zig_comp_reply_dirs ;;
+      --library-directory) _zig_comp_reply_dirs ;;
+      -T) _zig_comp_reply_files ;;
+      --script) _zig_comp_reply_files ;;
+      --version-script) _zig_comp_reply_files ;;
+      --dynamic-linker) _zig_comp_reply_files ;;
+      --sysroot) _zig_comp_reply_dirs ;;
+      --version)  ;;
+      --entry)  ;;
+      -fsoname)  ;;
+      -rpath) _zig_comp_reply_dirs ;;
+      -z) _zig_comp_reply_words 'nodelete,notext,defs,origin,nocopyreloc,now,lazy,relro,norelro' ;;
+      --subsystem)  ;;
+      --stack)  ;;
+      --image-base)  ;;
+      -weak-l) _zig_comp_reply_files ;;
+      -weak_library) _zig_comp_reply_files ;;
+      -framework)  ;;
+      -needed_framework)  ;;
+      -needed_library) _zig_comp_reply_files ;;
+      -weak_framework)  ;;
+      -F) _zig_comp_reply_dirs ;;
+      --entitlements) _zig_comp_reply_files ;;
+      -pagezero_size)  ;;
+      -headerpad)  ;;
+      --debug-log)  ;;
       *) _zig_comp_reply_zig_file ;;
     esac
+  elif [[ ${prev} == = ]]; then
+    _zig_comp_equal_sign_subcmd_opts_test "${COMP_WORDS[$(( COMP_CWORD - 2 ))]}"
   else
     # rely the argument of command
     _zig_comp_reply_zig_file
@@ -282,90 +347,32 @@ _zig_completions_run() {
   fi
 }
 
-_zig_comp_equal_sign_subcmd_opts_test() {
-  case "${1}=" in
-    -mcmodel=) _zig_comp_reply_words 'default,tiny,small,kernel,medium,large' ;;
-    -mexec-model=)  ;;
-    -ofmt=) _zig_comp_reply_words 'elf,c,wasm,coff,macho,spirv,plan9,hex,raw' ;;
-    --compress-debug-sections=) _zig_comp_reply_words 'none,zlib' ;;
-    -install_name=)  ;;
-    --initial-memory=)  ;;
-    --max-memory=)  ;;
-    --global-base=)  ;;
-    --export=)  ;;
-  esac
-}
-
-_zig_completions_test() {
+_zig_completions_ast_check() {
   if [[ ${cur:0:1} == [-+] ]]; then
     # rely options of command
-    _zig_comp_reply_list _zig_comp_subcmd_opts_test
-    if [[ ${COMPREPLY[*]} =~ =$ ]]; then compopt -o nospace; fi
-  elif [[ ${cur} == = ]]; then
-    _zig_comp_equal_sign_subcmd_opts_test "$prev"
+    _zig_comp_reply_list _zig_comp_subcmd_opts_ast_check
   elif [[ ${prev:0:1} == [-+] ]]; then
     case "${prev}" in
       # rely the value of command option
-      --test-filter)  ;;
-      --test-name-prefix)  ;;
-      --test-cmd)  ;;
       --color) _zig_comp_reply_words 'auto,off,on' ;;
-      -femit-bin) _zig_comp_reply_files ;;
-      -femit-asm) _zig_comp_reply_files ;;
-      -femit-llvm-ir) _zig_comp_reply_files ;;
-      -femit-llvm-bc) _zig_comp_reply_files ;;
-      -femit-h) _zig_comp_reply_files ;;
-      -femit-docs) _zig_comp_reply_dirs ;;
-      -femit-analysis) _zig_comp_reply_files ;;
-      -femit-implib) _zig_comp_reply_files ;;
-      --cache-dir) _zig_comp_reply_dirs ;;
-      --global-cache-dir) _zig_comp_reply_dirs ;;
-      --zig-lib-dir) _zig_comp_reply_dirs ;;
-      -target)  ;;
-      -mcpu)  ;;
-      -fomit-frame-pointer)  ;;
-      --name)  ;;
-      -O) _zig_comp_reply_words 'Debug,ReleaseFast,ReleaseSafe,ReleaseSmall' ;;
-      --pkg-begin)  ;;
-      --main-pkg-path) _zig_comp_reply_dirs ;;
-      -idirafter) _zig_comp_reply_dirs ;;
-      -isystem) _zig_comp_reply_dirs ;;
-      -I) _zig_comp_reply_dirs ;;
-      -cflags)  ;;
-      -l) _zig_comp_reply_files ;;
-      --library) _zig_comp_reply_files ;;
-      -needed-l) _zig_comp_reply_files ;;
-      --needed-library) _zig_comp_reply_files ;;
-      -L) _zig_comp_reply_dirs ;;
-      --library-directory) _zig_comp_reply_dirs ;;
-      -T) _zig_comp_reply_files ;;
-      --script) _zig_comp_reply_files ;;
-      --version-script) _zig_comp_reply_files ;;
-      --dynamic-linker) _zig_comp_reply_files ;;
-      --sysroot) _zig_comp_reply_dirs ;;
-      --version)  ;;
-      --entry)  ;;
-      -fsoname)  ;;
-      -rpath) _zig_comp_reply_dirs ;;
-      -z) _zig_comp_reply_words 'nodelete,notext,defs,origin,nocopyreloc,now,lazy,relro,norelro' ;;
-      --subsystem)  ;;
-      --stack)  ;;
-      --image-base)  ;;
-      -weak-l) _zig_comp_reply_files ;;
-      -weak_library) _zig_comp_reply_files ;;
-      -framework)  ;;
-      -needed_framework)  ;;
-      -needed_library) _zig_comp_reply_files ;;
-      -weak_framework)  ;;
-      -F) _zig_comp_reply_dirs ;;
-      --entitlements) _zig_comp_reply_files ;;
-      -pagezero_size)  ;;
-      -headerpad)  ;;
-      --debug-log)  ;;
       *) _zig_comp_reply_zig_file ;;
     esac
-  elif [[ ${prev} == = ]]; then
-    _zig_comp_equal_sign_subcmd_opts_test "${COMP_WORDS[$(( COMP_CWORD - 2 ))]}"
+  else
+    # rely the argument of command
+    _zig_comp_reply_zig_file
+  fi
+}
+
+_zig_completions_fmt() {
+  if [[ ${cur:0:1} == [-+] ]]; then
+    # rely options of command
+    _zig_comp_reply_list _zig_comp_subcmd_opts_fmt
+  elif [[ ${prev:0:1} == [-+] ]]; then
+    case "${prev}" in
+      # rely the value of command option
+      --color) _zig_comp_reply_words 'auto,off,on' ;;
+      *) _zig_comp_reply_zig_file ;;
+    esac
   else
     # rely the argument of command
     _zig_comp_reply_zig_file
