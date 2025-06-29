@@ -54,6 +54,13 @@ _zig_comp_util_get_varname ()
     echo "${encoded}"
 }
 
+_zig_comp_reply_build_steps ()
+{
+    local words=($(zig build --list-steps 2> /dev/null | grep -Eo '^\s*\w+' | grep -Eo '\w+'));
+    [ $? = 0 ] || return 1;
+    COMPREPLY=($(compgen -W "${words[*]}" -- "$cur"))
+}
+
 _zig_comp_reply_dirs ()
 {
     local IFS=$'\n';
@@ -167,7 +174,7 @@ _zig_completions_build() {
     _zig_comp_equal_sign_subcmd_opts_build "${COMP_WORDS[$(( COMP_CWORD - 2 ))]}"
   else
     # rely the argument of command
-    _zig_comp_reply_words 'install,uninstall,run,test'
+    _zig_comp_reply_build_steps
   fi
 }
 

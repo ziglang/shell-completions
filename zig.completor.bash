@@ -24,6 +24,14 @@ reply_zig_file=(
   '\.(zig|zir|zon|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
 )
 
+reply_build_steps() {
+  local words=( $(zig build --list-steps 2>/dev/null | grep -Eo '^\s*\w+' | grep -Eo '\w+') )
+  
+  [ $? = 0 ] || return 1
+
+  COMPREPLY=( $(compgen -W "${words[*]}" -- "$cur") )
+}
+
 subcmd_opts__fallback='--help'
 
 subcmd_opts_build=(
@@ -92,7 +100,8 @@ subcmd_opts_build=(
   --verbose-llvm-cpu-features
 )
 # https://ziglearn.org/chapter-3/#build-steps
-subcmd_args_build='install,uninstall,run,test'
+subcmd_args_build=@build_steps
+subcmd_args_build_fallback='install,uninstall,run,test'
 subcmd_opts_build_fallback=@files
 
 subcmd_opts_fmt=(
