@@ -11,7 +11,7 @@ subcmds=(
   build fetch init
   build-exe build-lib build-obj test run
   ast-check fmt reduce translate-c
-  ar cc c++ dlltool lib ranlib rc
+  ar cc c++ dlltool lib ranlib objcopy rc
   env help std libc targets version zen
 )
 
