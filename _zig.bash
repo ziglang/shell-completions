@@ -27,7 +27,7 @@ _zig_comp_subcmd_opts_ar=( --format --plugin= -h --help --output --rsp-quoting -
 
 _zig_comp_subcmd_opts_ast_check=( -h --help --color -t )
 
-_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l, --list-steps --verbose --color --prominent-compile-errors --summary --j --maxrss --fetch -Dtarget= -Dcpu= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
+_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l, --list-steps --verbose --color --prominent-compile-errors --summary -j --maxrss --fetch -Dtarget= -Dcpu= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
 
 _zig_comp_subcmd_opts_build_fallback=( @files )
 
@@ -115,7 +115,7 @@ _zig_comp_reply_zig_file() {
   _zig_comp_reply_files_in_pattern '\.(zig|zir|zon|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
 }
 
-_zig_comp_subcmds=( build fetch init build-exe build-lib build-obj test run ast-check fmt reduce translate-c ar cc c++ dlltool lib ranlib rc env help std libc targets version zen )
+_zig_comp_subcmds=( build fetch init build-exe build-lib build-obj test run ast-check fmt reduce translate-c ar cc c++ dlltool lib ranlib objcopy rc env help std libc targets version zen )
 
 _zig_comp_equal_sign_subcmd_opts_build() {
   case "${1}=" in
@@ -147,6 +147,7 @@ _zig_completions_build() {
       --prefix-include-dir) _zig_comp_reply_dirs ;;
       --color) _zig_comp_reply_words 'auto,off,on' ;;
       --summary) _zig_comp_reply_words 'all,new,failures,none' ;;
+      -j)  ;;
       --maxrss)  ;;
       --search-prefix) _zig_comp_reply_dirs ;;
       --sysroot) _zig_comp_reply_dirs ;;

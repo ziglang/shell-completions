@@ -48,7 +48,7 @@ subcmd_opts_build=(
   --color:'auto,off,on'
   --prominent-compile-errors
   --summary:'all,new,failures,none'
-  --j
+  -j:@hold
   --maxrss:@hold
   --fetch
 
