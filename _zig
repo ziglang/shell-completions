@@ -8,8 +8,8 @@ __zig_commands=(
   'build-exe:Create executable from source or object files'
   'build-lib:Create library from source or object files'
   'build-obj:Create object from source or object files'
+  'test:Perform unit testing'
   'run:Create executable and run immediately'
-  'test:Create and run a test build'
   'ast-check:Look for simple compile errors in any set of files'
   'fmt:Reformat Zig source into canonical form'
   'reduce:Minimize a bug report'
@@ -20,6 +20,8 @@ __zig_commands=(
   'dlltool:Use Zig as a drop-in dlltool.exe'
   'lib:Use Zig as a drop-in lib.exe'
   'ranlib:Use Zig as a drop-in ranlib'
+  'objcopy:Use Zig as a drop-in objcopy'
+  'rc:Use Zig as a drop-in rc.exe'
   'env:Print lib path, std path, cache directory, and version'
   'help:Print this help and exit'
   'std:View standard library documentation in a browser'
@@ -30,8 +32,10 @@ __zig_commands=(
 )
 
 __zig_general_options=(
-  '--watch[Enable compiler REPL]'
   '--color[Enable or disable colored error messages]: :(on off auto)'
+  '-j[Limit concurrent jobs (default is to use all CPU cores)]:int'
+  '-fincremental[Enable incremental compilation]'
+  '-fno-incremental[Disable incremental compilation]'
   '-femit-bin=[(default) Output machine code]:path:_files -/'
   '-fno-emit-bin[Do not output machine code]:'
   '-femit-asm[Output .s (assembly code)]:path:_files -/'
@@ -44,128 +48,158 @@ __zig_general_options=(
   '-fno-emit-h[(default) Do not generate a C header file (.h)]:'
   '-femit-docs[Create a docs/ dir with html documentation]:path:_files -/'
   '-fno-emit-docs[(default) Do not produce docs/ dir with html documentation]:'
-  '-femit-analysis[Write analysis JSON file with type information]:path:_files -/'
-  '-fno-emit-analysis[(default) Do not write analysis JSON file with type information]:'
   '-femit-implib[(default) Produce an import .lib when building a Windows DLL]:path:_files -/'
   '-fno-emit-implib[Do not produce an import .lib when building a Windows DLL]:'
   '--show-builtin[Output the source of @import("builtin") then exit]:'
   '--cache-dir[Override the local cache directory]:path:_files -/'
   '--global-cache-dir[Override the global cache directory]:path:_files -/'
   '--zig-lib-dir[Override path to Zig installation lib directory]:path:_files -/'
-  '--enable-cache[Output to cache directory; print path to stdout]'
 )
 
 __zig_compile_options=(
-  '-target[<arch><sub>-<os>-<abi> see the targets command]:target'
-  '-mcpu[Specify target CPU and feature set]:cpu'
-  '-mcmodel=[Limit range of code and data virtual addresses]:model:(default tiny small kernel medium large)'
-  '-mred-zone[Force-enable the "red-zone"]'
-  '-mno-red-zone[Force-disable the "red-zone"]'
-  '-fomit-frame-pointer[Omit the stack frame pointer]'
-  '-fno-omit-frame-pointer[Store the stack frame pointer]'
-  '-mexec-model=[(WASI) Execution model]:mode:(command reactor)'
   '--name[Override root name (not a file path)]:name'
+  '--libc[Provide a file which specifies libc paths]:dir:_files'
+  '-x[Treat subsequent input files as having type <language>]:language'
+  '--dep[Add an entry to the next module''s import table]:import'
+  '-M[Create a module based on the current per-module settings. The first module is the main module. "std" can be configured by omitting src After a -M argument, per-module settings are reset.]:name'
+  '--error-limit[Set the maximum amount of distinct error values]:int'
+  '-fllvm[Force using LLVM as the codegen backend]'
+  '-fno-llvm[Prevent using LLVM as a codegen backend]'
+  '-flibllvm[Force using the LLVM API in the codegen backend]'
+  '-fno-libllvm[Prevent using the LLVM API in the codegen backend]'
+  '-fclang[Force using Clang as the C/C++ compilation backend]'
+  '-fno-clang[Prevent using Clang as the C/C++ compilation backend]'
+  '-fPIE[Force-enable Position Independent Executable]'
+  '-fno-PIE[Force-disable Position Independent Executable]'
+  '-flto[Force-enable Link Time Optimization (requires LLVM extensions)]'
+  '-fno-lto[Force-disable Link Time Optimization]'
+  '-fdll-export-fns[Mark exported functions as DLL exports (Windows)]'
+  '-fno-dll-export-fns[Force-disable marking exported functions as DLL exports]'
+  '-freference-trace[How many lines of reference trace should be shown per compile error]:int'
+  '-fno-reference-trace[Disable reference trace]'
+  '-ffunction-sections[Places each function in a separate section]'
+  '-fno-function-sections[All functions go into same section]'
+  '-fdata-sections[Places each data in a separate section]'
+  '-fno-data-sections[All data go into same section]'
+  '-fstructured-cfg[(SPIR-V) force SPIR-V kernels to use structured control flow]'
+  '-fno-structured-cfg[(SPIR-V) force SPIR-V kernels to not use structured control flow]'
+  '-mexec-model=[(WASI) Execution model]:mode:(command reactor)'
+  '-municode[(Windows) Use wmain/wWinMain as entry point]'
+
+  '-target[<arch><sub>-<os>-<abi> see the targets command]:target'
   '-O-[Choose what to optimize for]:mode:((
     Debug\:"(default) Optimizations off, safety on"
     ReleaseFast\:"Optimizations on, safety off"
     ReleaseSafe\:"Optimizations on, safety on"
     ReleaseSmall\:"Optimize for small binary, safety off"
   ))'
-  '--pkg-begin:[Make pkg available to import and push current pkg]:string'
-  '--pkg-end[Pop current pkg]'
-  '--main-pkg-path[Set the directory of the root package]'
+  '-ofmt=[Override target object format]:mode:((
+    elf\:"Executable and Linking Format"
+    c\:"Compile to C source code"
+    wasm\:"WebAssembly"
+    coff\:"Common Object File Format (Windows)"
+    macho\:"macOS relocatables"
+    spriv\:"Standard, Portable Intermediate Representation V (SPIR-V)"
+    plan9\:"Plan 9 from Bell Labs object format"
+    hex\:"Intel IHEX (planned)"
+    raw\:"Dump machine code directly (planned)"
+  ))'
+  '-mcpu[Specify target CPU and feature set]:cpu'
+  '-mcmodel=[Limit range of code and data virtual addresses]:model:(default extreme kernel large medany medium medlov medmid normal small tiny)'
+  '-mred-zone[Force-enable the "red-zone"]'
+  '-mno-red-zone[Force-disable the "red-zone"]'
+  '-fomit-frame-pointer[Omit the stack frame pointer]'
+  '-fno-omit-frame-pointer[Store the stack frame pointer]'
   '-fPIC[Force-enable Position Independent Code]'
   '-fno-PIC[Force-disable Position Independent Code]'
-  '-fPIE[Force-enable Position Independent Executable]'
-  '-fno-PIE[Force-disable Position Independent Executable]'
-  '-flto[Force-enable Link Time Optimization (requires LLVM extensions)]'
-  '-fno-lto[Force-disable Link Time Optimization]'
   '-fstack-check[Enable stack probing in unsafe builds]'
   '-fno-stack-check[Disable stack probing in safe builds]'
   '-fstack-protector[Enable stack protection in unsafe builds]'
   '-fno-stack-protector[Disable stack protection in safe builds]'
-  '-fsanitize-c[Enable C undefined behavior detection in unsafe builds]'
-  '-fno-sanitize-c[Disable C undefined behavior detection in safe builds]'
   '-fvalgrind[Include valgrind client requests in release builds]'
   '-fno-valgrind[Omit valgrind client requests in debug builds]'
+  '-fsanitize-c=[Enable C undefined behavior detection in unsafe builds]:mode:(trap full)'
+  '-fno-sanitize-c[Disable C undefined behavior detection in safe builds]'
   '-fsanitize-thread[Enable Thread Sanitizer]'
   '-fno-sanitize-thread[Disable Thread Sanitizer]'
-  '-fdll-export-fns[Mark exported functions as DLL exports (Windows)]'
-  '-fno-dll-export-fns[Force-disable marking exported functions as DLL exports]'
-  '-fno-dll-export-fns[Force-disable marking exported functions as DLL exports]'
-  '-funwind-tables[Always produce unwind table entries for all functions]'
-  '-fno-unwind-tables[Never produce unwind table entries]'
-  '-fLLVM[Force using LLVM as the codegen backend]'
-  '-fno-LLVM[Prevent using LLVM as a codegen backend]'
-  '-fClang[Force using Clang as the C/C++ compilation backend]'
-  '-fstage1[Force using bootstrap compiler as the codegen backend]'
-  '-fno-stage1[Prevent using bootstrap compiler as the codegen backend]'
-  '-freference-trace[How many lines of reference trace should be shown per compile error]:int'
-  '-fno-reference-trace[Disable reference trace]'
-  '-fsingle-threaded[Code assumes there is only one thread]'
-  '-fno-single-threaded[Code may not assume there is only one thread]'
+  '-ffuzz[Enable fuzz testing instrumentation]'
+  '-fno-fuzz[Disable fuzz testing instrumentation]'
   '-fbuiltin[Enable implicit builtin knowledge of functions]'
   '-fno-builtin[Disable implicit builtin knowledge of functions]'
-  '-ffunction-sections[Places each function in a separate section]'
-  '-fno-function-sections[All functions go into same section]'
+  '-funwind-tables[Always produce unwind table entries for all functions]'
+  '-fasync-unwind-tables[Always produce asynchronous unwind table entries for all functions]'
+  '-fno-unwind-tables[Never produce unwind table entries]'
+  '-ferror-tracing[Enable error tracing in ReleaseFast mode]'
+  '-fno-error-tracing[Disable error tracing in Debug and ReleaseSafe mode]'
+  '-fsingle-threaded[Code assumes there is only one thread]'
+  '-fno-single-threaded[Code may not assume there is only one thread]'
   '-fstrip[Omit debug symbols]'
   '-fno-strip[Keep debug symbols]'
-  '-ofmt=[Override target object format]:mode:((
-    elf\:"Executable and Linking Format"
-    c\:"Compile to C source code" wasm\:"WebAssembly"
-    pe\:"Portable Executable (Windows)"
-    coff\:"Common Object File Format (Windows)"
-    macho\:"macOS relocatables"
-    hex\:"Intel IHEX (planned)"
-    raw\:"Dump machine code directly (planned)"
-  ))'
-  '-dirafter[Add directory to AFTER include search path]:dir:_files -/'
+  '-idirafter[Add directory to AFTER include search path]:dir:_files -/'
   '-isystem[Add directory to SYSTEM include search path]:dir:_files -/'
   '-I-[Add directory to include search path]:dir:_files -/'
   '-D[Define C \[macro\] to \[value\] (1 if \[value\] omitted)]:string'
-  '--libc[Provide a file which specifies libc paths]:dir:_files'
   '-cflags[Set extra flags for the next positional C source files]:[flags]'
+  '-rcincludes=[Set the type of includes to use when compiling .rc source files]:type:((
+    any\:"(default) Use msvc if available, fall back to gnu"
+    msvc\:"Use msvc include paths (must be present on the system)"
+    gnu\:"Use mingw include paths (distributed with Zig)"
+    none\:"Do not use any autodetected include paths"
+  ))'
 )
 
 __zig_link_options=(
-  '-l-[Link against system library (only if actually used)]:library:__zig_library'
-  '-needed-l-[Link against system library (even if unused)]:library:__zig_library'
-  '-L-[Add a directory to the library search path]:d:_files -/'
   '-T-[Use a custom linker script]:script:_files'
-  '--library[Link against system library (only if actually used)]:library:__zig_library'
-  '--needed-library[Link against system library (even if unused)]:library:__zig_library'
-  '--library-directory[Add a directory to the library search path]:d:_files -/'
   '--version-script[Provide a version .map file]:path:_files -/'
+  '--undefined-version[Allow version scripts to refer to undefined symbols]'
+  '--no-undefined-version[(default) Disallow version scripts from referring to undefined symbols]'
+  '--enable-new-dtags[Use the new behavior for dynamic tags (RUNPATH)]'
+  '--disable-new-dtags[Use the old behavior for dynamic tags (RPATH)]'
   '--dynamic-linker[Set the dynamic interpreter path (usually ld.so)]:path:_files -/'
   '--sysroot[Set the system root directory (usually /)]:path:_files -/'
   '--version[Dynamic library semver]:string'
-  '--entry[Set the entrypoint symbol name]:string'
+  '-fentry=[Set the entrypoint symbol name]:string'
+  '-fno-entry[Do not output any entry point]'
+  '--force_undefined[Specify the symbol must be defined for the link to succeed]:name'
   '-fsoname=[Override the default SONAME value]:name'
   '-fno-soname[Disable emitting a SONAME]'
-  '-fLLD[Force using LLD as the linker]'
-  '-fno-LLD[Prevent using LLD as the linker]'
+  '-flld[Force using LLD as the linker]'
+  '-fno-lld[Prevent using LLD as the linker]'
   '-fcompiler-rt[Always include compiler-rt symbols in output]'
   '-fno-compiler-rt[Prevent including compiler-rt symbols in output]'
+  '-fubsan-rt[Always include ubsan-rt symbols in the output]'
+  '-fno-ubsan-rt[Prevent including ubsan-rt symbols in the output]'
   '-rdynamic[Add all symbols to the dynamic symbol table]'
-  '-rpath[Add directory to the runtime library search path]:path:_files -/'
   '-feach-lib-rpath[Ensure adding rpath for each used dynamic library]'
   '-fno-each-lib-rpath[Prevent adding rpath for each used dynamic library]'
   '-fallow-shlib-undefined[Allows undefined symbols in shared libraries]'
   '-fno-allow-shlib-undefined[Disallows undefined symbols in shared libraries]'
-  '-fbuild-id[Helps coordinate stripped binaries with debug symbols]'
-  '-fno-build-id[(default) Saves a bit of time linking]'
+  '-fallow-so-scripts[Allows .so files to be GNU ld scripts]'
+  '-fno-allow-so-scripts[(default) .so files must be ELF files]'
+  '--build-id=[At a minor link-time expense, embeds a build ID in binaries]:style:((
+    fast\:"8-byte non-cryptographic hash (COFF, ELF, WASM)"
+    sha1, tree\:"20-byte cryptographic hash (ELF, WASM)"
+    md5\:"16-byte cryptographic hash (ELF)"
+    uuid\:"16-byte random UUID (ELF, WASM)"
+    0x[hexstring]\:"Constant ID, maximum 32 bytes (ELF, WASM)"
+    none\:"(default) No build ID"
+  ))'
   '--eh-frame-hdr[Enable C++ exception handling by passing --eh-frame-hdr to linker]'
+  '--no-eh-frame-hdr[Disable C++ exception handling by passing --no-eh-frame-hdr to linker]'
   '--emit-relocs[Enable output of relocation sections for post build tools]'
   '-z[Set linker extension flags]: :((
     nodelete\:"Indicate that the object cannot be deleted from a process"
     notext\:"Permit read-only relocations in read-only segments"
     defs\:"Force a fatal error if any undefined symbols remain"
+    undefs\:"Reverse of -z defs"
     origin\:"Indicate that the object must have its origin processed"
     nocopyreloc\:"Disable the creation of copy relocations"
     now\:"(default) Force all relocations to be processed on load"
     lazy\:"Do not force all relocations to be processed on load"
     relro\:"(default) Force all relocations to be read-only after processing"
     norelro\:"Do not force all relocations to be read-only after processing"
+    common-page-size=\:"Set the common page size for ELF binaries"
+    max-page-size=\:"Set the max page size for ELF binaries"
   ))'
   '-dynamic[Force output to be dynamically linked]'
   '-static[Force output to be statically linked]'
@@ -173,48 +207,70 @@ __zig_link_options=(
   '--compress-debug-sections=[Debug section compression settings]: :((
     none\:"No compression"
     zlib\:"Compression with deflate/inflate"
+    zstd\:"Compression with zstandard"
   ))'
   '--gc-sections[Force removal of functions and data that are unreachable by the entry point or exported symbols]'
   '--no-gc-sections[Do not force removal of unreachable functions and data]'
+  '--sort-section=[Sort wildcard section patterns by ''name'' or ''alignment'']:value'
   '--subsystem[(Windows) /SUBSYSTEM:<subsystem> to the linker]:subsystem'
   '--stack[Override default stack size]:int'
   '--image-base[Set base address for executable image]:int'
-  '-weak-l-[(Darwin) link against system library and mark it and all referenced symbols as weak]:library:__zig_library'
-  '-framework[(Darwin) link against framework]:framework'
-  '-needed_framework[(Darwin) link against framework (even if unused)]:framework'
-  '-weak_framework[(Darwin) link against framework and mark it and all referenced symbols as weak]:framework'
-  '-F[(Darwin) add search path for frameworks]:dir:_files -/'
   '-install_name=[(Darwin) add dylibs install name]:string'
   '--entitlements[(Darwin) add path to entitlements file for embedding in code signature]:path:_files -/'
   '-pagezero_size[(Darwin) size of the __PAGEZERO segment in hexadecimal notation]:int'
-  '-search_paths_first[(Darwin) search each dir in library search paths for `libx.dylib` then `libx.a`]'
-  '-search_dylibs_first[(Darwin) search `libx.dylib` in each dir in library search paths, then `libx.a`]'
   '-headerpad[(Darwin) set minimum space for future expansion of the load commands in hexadecimal notation]:int'
   '-headerpad_max_install_names[(Darwin) set enough space as if all paths were MAXPATHLEN]'
   '-dead_strip[(Darwin) remove functions and data that are unreachable by the entry point or exported symbols]'
   '-dead_strip_dylibs[(Darwin) remove dylibs that are unreachable by the entry point or exported symbols]'
+  '-ObjC[(Darwin) force load all members of static archives that implement an Objective-C class or category]'
   '--import-memory[(WebAssembly) import memory from the environment]'
+  '--export-memory[(WebAssembly) export memory to the host (Default unless --import-memory used)]'
+  '--import-symbols[(WebAssembly) import missing symbols from the host environment]'
   '--import-table[(WebAssembly) import function table from the host environment]'
   '--export-table[(WebAssembly) export function table to the host environment]'
   '--initial-memory=[(WebAssembly) initial size of the linear memory]:int'
   '--max-memory=[(WebAssembly) maximum size of the linear memory]:int'
   '--shared-memory[(WebAssembly) use shared linear memory]'
   '--global-base=[(WebAssembly) where to start to place global data]:int'
+
+  '-l-[Link against system library (only if actually used)]:library:__zig_library'
+  '--library[Link against system library (only if actually used)]:library:__zig_library'
+  '-needed-l-[Link against system library (even if unused)]:library:__zig_library'
+  '--needed-library[Link against system library (even if unused)]:library:__zig_library'
+  '-weak-l-[(Darwin) link against system library and mark it and all referenced symbols as weak]:library:__zig_library'
+  '-L-[Add a directory to the library search path]:d:_files -/'
+  '--library-directory[Add a directory to the library search path]:d:_files -/'
+  '-search_paths_first[For each library search path, check for dynamic lib then static lib before proceeding to next path]'
+  '-search_paths_first_static[For each library search path, check for static lib then dynamic lib before proceeding to next path]'
+  '-search_dylibs_first[Search for dynamic libs in all library search paths, then static libs]'
+  '-search_static_first[Search for static libs in all library search paths, then dynamic libs]'
+  '-search_dylibs_only[Only search for dynamic libs]'
+  '-search_static_only[Only search for static libs]'
+  '-rpath[Add directory to the runtime library search path]:path:_files -/'
+  '-framework[(Darwin) link against framework]:framework'
+  '-needed_framework[(Darwin) link against framework (even if unused)]:framework'
+  '-weak_framework[(Darwin) link against framework and mark it and all referenced symbols as weak]:framework'
+  '-F[(Darwin) add search path for frameworks]:dir:_files -/'
   '--export=[(WebAssembly) Force a symbol to be exported]:string'
 )
 
 __zig_debug_options=(
+  '-fopt-bisect-limit=[Only run <limit> first LLVM optimization passes]:int'
   '-ftime-report[Print timing diagnostics]'
   '-fstack-report[Print stack size diagnostics]'
   '--verbose-link[Display linker invocations]'
   '--verbose-cc[Display C compiler invocations]'
   '--verbose-air[Enable compiler debug output for Zig AIR]'
+  '--verbose-intern-pool[Enable compiler debug output for InternPool]'
+  '--verbose-generic-instances[Enable compiler debug output for generic instance generation]'
   '--verbose-llvm-ir[Enable compiler debug output for LLVM IR]'
+  '--verbose-llvm-bc=[Enable compiler debug output for unoptimized LLVM BC]:path'
   '--verbose-cimport[Enable compiler debug output for C imports]'
   '--verbose-llvm-cpu-features[Enable compiler debug output for LLVM CPU features]'
   '--debug-log[Enable printing debug/info log messages for scope]:string'
   '--debug-compile-errors[Crash with helpful diagnostics at the first compile error]'
   '--debug-link-snapshot[Enable dumping of the linkers state in JSON format]'
+  '--debug-rt[Debug compiler runtime libraries]'
   '*:files:__zig_files'
 )
 
@@ -225,10 +281,11 @@ __zig_test_options=(
   '--test-cmd-bin[Appends test binary path to test cmd args]'
   '--test-evented-io[Runs the test in evented I/O mode]'
   '--test-no-exec[Compiles test binary without running it]'
+  '--test-runner[Specify a custom test runner]:path'
 )
 
 __zig_files() {
-  _files -g "*.{zig,zir,o,o,obj,lib,a,so,dll,dylib,tbd,s,S,c,cpp,C,cc,cxx}"
+  _files -g "*.{zig,o,obj,lib,a,so,dll,dylib,tbd,s,S,c,cpp,C,cc,cxx,c++,bc,def,rc,res}"
 }
 
 __zig_library() {
@@ -245,14 +302,12 @@ __zig_build() {
     '--prefix-lib-dir[Override default library directory path]:path:_files -/'
     '--prefix-exe-dir[Override default executable directory path]:path:_files -/'
     '--prefix-include-dir[Override default include directory path]:path:_files -/'
-    '--sysroot[Set the system root directory (usually /)]:path:_files -/'
-    '--search-prefix[Add a path to look for binaries, libraries, headers]:path:_files -/'
-    '--libc[Provide a file which specifies libc paths]:dir:_files'
+    '--release=[Request release mode, optionally specifying a preferred optimization mode: fast, safe, small]:mode:(fast safe small)'
     '-fdarling[Enable integration with system-installed Darling to execute macOS programs on Linux hosts]'
     '-fno-darling[(default) Disable integration with system-installed Darling to execute macOS programs on Linux hosts]'
     '-fqemu[Enable integration with system-installed QEMU to execute foreign-architecture programs on Linux hosts]'
     '-fno-qemu[(default) Disable integration with system-installed QEMU to execute foreign-architecture programs on Linux hosts]'
-    '--glibc-runtimes[Enhances QEMU integration by providing glibc built for multiple foreign architectures, allowing execution of non-native programs that link with glibc]:dir:_files'
+    '--libc-runtimes[Enhances QEMU integration by providing dynamic libc (e.g. glibc or musl) built for multiple foreign architectures, allowing execution of non-native]:dir:_files'
     '-frosetta[Rely on Rosetta to execute x86_64 programs on ARM64 macOS hosts]'
     '-fno-rosetta[(default) Do not rely on Rosetta to execute x86_64 programs on ARM64 macOS hosts]'
     '-fwasmtime[Enable integration with system-installed wasmtime to execute WASI binaries]'
@@ -262,6 +317,58 @@ __zig_build() {
     '--verbose[Print commands before executing them]'
     '--color[Enable or disable colored error messages]: :(on off auto)'
     '--prominent-compile-errors[Output compile errors formatted for a human to read]'
+    '--summary[Control the printing of the build summary]:mode:((
+      all\:"Print the build summary in its entirety"
+      new\:"Omit cached steps"
+      failures\:"(Default) Only print failed steps"
+      none\:"Do not print the build summary"
+    ))'
+    '-j[Limit concurrent jobs (default is to use all CPU cores)]:int'
+    '--maxrss[Limit memory usage (default is to use available memory)]:int'
+    '--skip-oom-steps[Instead of failing, skip steps that would exceed --maxrss]'
+    '--fetch=[Fetch dependency tree (optionally choose laziness) and exit]:mode:((
+      needed\:"(Default) Lazy dependencies are fetched as needed"
+      all\:"Lazy dependencies are always fetched"
+    ))'
+    '--watch[Continuously rebuild when source files are modified]'
+    '--fuzz[Continuously search for unit test failures]'
+    '--debounce[Delay before rebuilding after changed file detected]:int'
+    '-fincremental[Enable incremental compilation]'
+    '-fno-incremental[Disable incremental compilation]'
+    '--sysroot[Set the system root directory (usually /)]:path:_files -/'
+    '--search-prefix[Add a path to look for binaries, libraries, headers]:path:_files -/'
+    '--libc[Provide a file which specifies libc paths]:dir:_files'
+    '--system[Disable package fetching; enable all integrations]:name'
+    '-fsys=[Enable a system integration]:name'
+    '-fno-sys=[Disable a system integration]:name'
+    '-freference-trace=[How many lines of reference trace should be shown per compile error]:int'
+    '-fno-reference-trace[Disable reference trace]'
+    '-fallow-so-scripts[Allows .so files to be GNU ld scripts]'
+    '-fno-allow-so-scripts[(default) .so files must be ELF files]'
+    '--build-file[Override path to build.zig]:file'
+    '--cache-dir[Override path to local Zig cache directory]:path'
+    '--global-cache-dir[Override path to global Zig cache directory]:path'
+    '--zig-lib-dir[Override path to Zig lib directory]:path'
+    '--build-runner[Override path to build runner]:file'
+    '--seed[For shuffling dependency traversal order (default: random)]:int'
+    '--build-id=[At a minor link-time expense, embeds a build ID in binaries]:style:((
+      fast\:"8-byte non-cryptographic hash (COFF, ELF, WASM)"
+      sha1, tree\:"20-byte cryptographic hash (ELF, WASM)"
+      md5\:"16-byte cryptographic hash (ELF)"
+      uuid\:"16-byte random UUID (ELF, WASM)"
+      0x[hexstring]\:"Constant ID, maximum 32 bytes (ELF, WASM)"
+      none\:"(default) No build ID"
+    ))'
+    '--debug-log[Enable debugging the compiler]:scope'
+    '--debug-pkg-config[Fail if unknown pkg-config flags encountered]'
+    '--debug-rt[Debug compiler runtime libraries]'
+    '--verbose-link[Enable compiler debug output for linking]'
+    '--verbose-air[Enable compiler debug output for Zig AIR]'
+    '--verbose-llvm-ir=[Enable compiler debug output for LLVM IR]:file'
+    '--verbose-llvm-bc=[Enable compiler debug output for LLVM BC]:file'
+    '--verbose-cimport[Enable compiler debug output for C imports]'
+    '--verbose-cc[Enable compiler debug output for C compilation]'
+    '--verbose-llvm-cpu-features[Enable compiler debug output for LLVM CPU features]'
   )
   in_options=false
   in_project_options=false
@@ -279,6 +386,8 @@ __zig_build() {
         in_project_options=true
         continue
       fi
+    elif [ "$line" = "System Integration Options:" ]; then
+      break
     else
       if [ -n "$(grep '  -' <<<"$line")" ]; then
         #  -Dflag=[arg]       description -> -Dflag=[description]:arg
@@ -319,7 +428,8 @@ case $state in
         '--check[List non-conforming files and exit with an error if the list is non-empty]' \
         '--ast-check[Run zig ast-check on every file]' \
         '--exclude[Exclude file or directory from formatting]:path:_files -/' \
-        '*:files:_files -g "*.zig"'
+        '--zon[Treat all input files as ZON, regardless of file extension]' \
+        '*:files:_files -g "*.{zig,zon}"'
       ;;
 
     build)
