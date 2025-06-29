@@ -27,7 +27,7 @@ _zig_comp_subcmd_opts_ar=( --format --plugin= -h --help --output --rsp-quoting -
 
 _zig_comp_subcmd_opts_ast_check=( -h --help --color -t )
 
-_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l, --list-steps --verbose --color --prominent-compile-errors --summary -j --maxrss --fetch -Dtarget= -Dcpu= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
+_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l --list-steps --verbose --color --prominent-compile-errors --summary -j --maxrss --skip-oom-steps --fetch --watch --fuzz --debounce -fincremental -fno-incremental -Dtarget= -Dcpu= -Dofmt= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --debug-rt --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
 
 _zig_comp_subcmd_opts_build_fallback=( @files )
 
@@ -122,11 +122,12 @@ _zig_comp_equal_sign_subcmd_opts_build() {
     --release=) _zig_comp_reply_words 'fast,safe,small' ;;
     -Dtarget=)  ;;
     -Dcpu=)  ;;
+    -Dofmt=)  ;;
     -Ddynamic-linker=)  ;;
     -Doptimize=) _zig_comp_reply_words 'Debug,ReleaseSafe,ReleaseFast,ReleaseSmall' ;;
     -fsys=)  ;;
     -fno-sys=)  ;;
-    --verbose-llvm-bc=)  ;;
+    --verbose-llvm-bc=) _zig_comp_reply_files ;;
   esac
 }
 
@@ -149,6 +150,7 @@ _zig_completions_build() {
       --summary) _zig_comp_reply_words 'all,new,failures,none' ;;
       -j)  ;;
       --maxrss)  ;;
+      --debounce)  ;;
       --search-prefix) _zig_comp_reply_dirs ;;
       --sysroot) _zig_comp_reply_dirs ;;
       --system) _zig_comp_reply_dirs ;;
@@ -158,6 +160,7 @@ _zig_completions_build() {
       --zig-lib-dir) _zig_comp_reply_dirs ;;
       --seed)  ;;
       --debug-log)  ;;
+      --verbose-llvm-ir)  ;;
       *) _zig_comp_reply_files ;;
     esac
   elif [[ ${prev} == = ]]; then

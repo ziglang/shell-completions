@@ -43,17 +43,23 @@ subcmd_opts_build=(
   -fwine -fno-wine
 
   -h --help
-  -l, --list-steps
+  -l --list-steps
   --verbose
   --color:'auto,off,on'
   --prominent-compile-errors
   --summary:'all,new,failures,none'
   -j:@hold
   --maxrss:@hold
+  --skip-oom-steps
   --fetch
+  --watch
+  --fuzz
+  --debounce:@hold
+  -fincremental -fno-incremental
 
   -Dtarget=
   -Dcpu=
+  -Dofmt=
   -Ddynamic-linker=
   -Doptimize=:'Debug,ReleaseSafe,ReleaseFast,ReleaseSmall'
 
@@ -76,10 +82,11 @@ subcmd_opts_build=(
 
   --debug-log:@hold
   --debug-pkg-config
+  --debug-rt
   --verbose-link
   --verbose-air
-  --verbose-llvm-ir
-  --verbose-llvm-bc=
+  --verbose-llvm-ir:@hold
+  --verbose-llvm-bc=:@files
   --verbose-cimport
   --verbose-cc
   --verbose-llvm-cpu-features
