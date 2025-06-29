@@ -11,7 +11,7 @@ subcmds=(
   build fetch init
   build-exe build-lib build-obj test run
   ast-check fmt reduce translate-c
-  ar cc c++ dlltool lib ranlib rc
+  ar cc c++ dlltool lib ranlib objcopy rc
   env help std libc targets version zen
 )
 
@@ -23,6 +23,14 @@ reply_zig_file=(
   'reply_files_in_pattern'
   '\.(zig|zir|zon|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
 )
+
+reply_build_steps() {
+  local words=( $(zig build --list-steps 2>/dev/null | grep -Eo '^\s*\w+' | grep -Eo '\w+') )
+  
+  [ $? = 0 ] || return 1
+
+  COMPREPLY=( $(compgen -W "${words[*]}" -- "$cur") )
+}
 
 subcmd_opts__fallback='--help'
 
@@ -43,17 +51,23 @@ subcmd_opts_build=(
   -fwine -fno-wine
 
   -h --help
-  -l, --list-steps
+  -l --list-steps
   --verbose
   --color:'auto,off,on'
   --prominent-compile-errors
   --summary:'all,new,failures,none'
-  --j
+  -j:@hold
   --maxrss:@hold
+  --skip-oom-steps
   --fetch
+  --watch
+  --fuzz
+  --debounce:@hold
+  -fincremental -fno-incremental
 
   -Dtarget=
   -Dcpu=
+  -Dofmt=
   -Ddynamic-linker=
   -Doptimize=:'Debug,ReleaseSafe,ReleaseFast,ReleaseSmall'
 
@@ -76,16 +90,18 @@ subcmd_opts_build=(
 
   --debug-log:@hold
   --debug-pkg-config
+  --debug-rt
   --verbose-link
   --verbose-air
-  --verbose-llvm-ir
-  --verbose-llvm-bc=
+  --verbose-llvm-ir:@hold
+  --verbose-llvm-bc=:@files
   --verbose-cimport
   --verbose-cc
   --verbose-llvm-cpu-features
 )
 # https://ziglearn.org/chapter-3/#build-steps
-subcmd_args_build='install,uninstall,run,test'
+subcmd_args_build=@build_steps
+subcmd_args_build_fallback='install,uninstall,run,test'
 subcmd_opts_build_fallback=@files
 
 subcmd_opts_fmt=(

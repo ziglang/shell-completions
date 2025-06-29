@@ -27,7 +27,7 @@ _zig_comp_subcmd_opts_ar=( --format --plugin= -h --help --output --rsp-quoting -
 
 _zig_comp_subcmd_opts_ast_check=( -h --help --color -t )
 
-_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l, --list-steps --verbose --color --prominent-compile-errors --summary --j --maxrss --fetch -Dtarget= -Dcpu= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
+_zig_comp_subcmd_opts_build=( -p --prefix --prefix-lib-dir --prefix-exe-dir --prefix-include-dir --release= -fdarling -fno-darling -fqemu -fno-qemu --glibc-runtimes -frosetta -fno-rosetta -fwasmtime -fno-wasmtime -fwine -fno-wine -h --help -l --list-steps --verbose --color --prominent-compile-errors --summary -j --maxrss --skip-oom-steps --fetch --watch --fuzz --debounce -fincremental -fno-incremental -Dtarget= -Dcpu= -Dofmt= -Ddynamic-linker= -Doptimize= --search-prefix --sysroot --libc --system -fsys= -fno-sys= -freference-trace -fno-reference-trace --build-file --cache-dir --global-cache-dir --zig-lib-dir --build-runner --seed --debug-log --debug-pkg-config --debug-rt --verbose-link --verbose-air --verbose-llvm-ir --verbose-llvm-bc= --verbose-cimport --verbose-cc --verbose-llvm-cpu-features )
 
 _zig_comp_subcmd_opts_build_fallback=( @files )
 
@@ -52,6 +52,13 @@ _zig_comp_util_get_varname ()
         encoded=${name//[^a-zA-Z_]/_};
     fi;
     echo "${encoded}"
+}
+
+_zig_comp_reply_build_steps ()
+{
+    local words=($(zig build --list-steps 2> /dev/null | grep -Eo '^\s*\w+' | grep -Eo '\w+'));
+    [ $? = 0 ] || return 1;
+    COMPREPLY=($(compgen -W "${words[*]}" -- "$cur"))
 }
 
 _zig_comp_reply_dirs ()
@@ -115,18 +122,19 @@ _zig_comp_reply_zig_file() {
   _zig_comp_reply_files_in_pattern '\.(zig|zir|zon|o|obj|lib|a|so|dll|dylib|tbd|s|S|c|cxx|cc|C|cpp|stub|m|mm|bc|cu)$'
 }
 
-_zig_comp_subcmds=( build fetch init build-exe build-lib build-obj test run ast-check fmt reduce translate-c ar cc c++ dlltool lib ranlib rc env help std libc targets version zen )
+_zig_comp_subcmds=( build fetch init build-exe build-lib build-obj test run ast-check fmt reduce translate-c ar cc c++ dlltool lib ranlib objcopy rc env help std libc targets version zen )
 
 _zig_comp_equal_sign_subcmd_opts_build() {
   case "${1}=" in
     --release=) _zig_comp_reply_words 'fast,safe,small' ;;
     -Dtarget=)  ;;
     -Dcpu=)  ;;
+    -Dofmt=)  ;;
     -Ddynamic-linker=)  ;;
     -Doptimize=) _zig_comp_reply_words 'Debug,ReleaseSafe,ReleaseFast,ReleaseSmall' ;;
     -fsys=)  ;;
     -fno-sys=)  ;;
-    --verbose-llvm-bc=)  ;;
+    --verbose-llvm-bc=) _zig_comp_reply_files ;;
   esac
 }
 
@@ -147,7 +155,9 @@ _zig_completions_build() {
       --prefix-include-dir) _zig_comp_reply_dirs ;;
       --color) _zig_comp_reply_words 'auto,off,on' ;;
       --summary) _zig_comp_reply_words 'all,new,failures,none' ;;
+      -j)  ;;
       --maxrss)  ;;
+      --debounce)  ;;
       --search-prefix) _zig_comp_reply_dirs ;;
       --sysroot) _zig_comp_reply_dirs ;;
       --system) _zig_comp_reply_dirs ;;
@@ -157,13 +167,14 @@ _zig_completions_build() {
       --zig-lib-dir) _zig_comp_reply_dirs ;;
       --seed)  ;;
       --debug-log)  ;;
+      --verbose-llvm-ir)  ;;
       *) _zig_comp_reply_files ;;
     esac
   elif [[ ${prev} == = ]]; then
     _zig_comp_equal_sign_subcmd_opts_build "${COMP_WORDS[$(( COMP_CWORD - 2 ))]}"
   else
     # rely the argument of command
-    _zig_comp_reply_words 'install,uninstall,run,test'
+    _zig_comp_reply_build_steps
   fi
 }
 
